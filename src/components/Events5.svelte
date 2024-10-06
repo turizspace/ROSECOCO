@@ -1,355 +1,242 @@
 <script>
-  import { onMount } from 'svelte';
-  import NDK, { NDKEvent, NDKNip07Signer } from "@nostr-dev-kit/ndk";
-  import ZAP from "../assets/images/ZAP.png";
-  import { getZapEndpoint, makeZapRequest, useFetchImplementation } from '../utils/zapUtils.js';
+import { onMount, onDestroy } from 'svelte';
+import NDK from "@nostr-dev-kit/ndk";
+import Icon from '@iconify/svelte'; // Ensure you have this installed
 
-  let events = [];
-  let showModal = false;
-  let currentLud16 = '';
-  let zapAmount = '';
-  let customZapComment = '';
-  let customZapAmountMillisats = ''; // Amount in millisats
-  let customZapAmountSats = ''; // Amount in sats
-  const defaultZapAmounts = [5000, 10000, 20000, 50000];
+let eventsKind1 = [];
+let profiles = {};
+let isLoading = true;
 
-  let ndk; // Define ndk in the component scope
-  let nip07signer;
+let ndk;
+let subscriptionKind1;
+let subscriptionKind0;
 
-  onMount(async () => {
-    nip07signer = new NDKNip07Signer();
-
+onMount(async () => {
+  try {
+    // Initialize NDK with the signer
     ndk = new NDK({
       explicitRelayUrls: [
+        'wss://relay.snort.social',
+        'wss://relay.primal.net',
+        'wss://nostr-02.dorafactory.org',
+        'wss://relay.snort.social',
         'wss://relay.damus.io',
+        'wss://relay.nostrplebs.com',
+        'wss://nos.lol',
+        'wss://relay.primal.net'
       ],
-      signer: nip07signer
     });
 
+    // Connect to the relay
     await ndk.connect();
-    console.log("connected");
+    console.log("Connected to relay");
 
-    const subscription = ndk.subscribe({
+    // Subscribe to events of kind 1
+    subscriptionKind1 = ndk.subscribe({
+      kinds: [30402],
+      authors: ['06830f6cb5925bd82cca59bda848f0056666dff046c5382963a997a234da40c5',
+      '8097a42ccf7806cc1af5fda269048be1972167c6c6516a211616e6c1da0f15e6',
+      'd7c6d014b342815ba29c48f3449e4f0073df84f4ad580ae173538041a6abb6b8',
+      '9cb3545c36940d9a2ef86d50d5c7a8fab90310cc898c4344bcfc4c822ff47bca',
+      'd662c10fcdb2b990cb13f9e934f4798d9bd0991979d03aaa052ccb6478d039af',
+      'f4db5270bd991b17bea1e6d035f45dee392919c29474bbac10342d223c74e0d0']
+    });
+
+    // Handle incoming events of kind 1
+    subscriptionKind1.on('event', (event) => {
+      console.log("Kind 1 event received:", event);
+      eventsKind1 = [...eventsKind1, event];
+      isLoading = false; // Stop loading once the first event is received
+    });
+
+    // Subscribe to events of kind 0
+    subscriptionKind0 = ndk.subscribe({
       kinds: [0],
-      limit: 45
+      authors: ['06830f6cb5925bd82cca59bda848f0056666dff046c5382963a997a234da40c5',
+      '8097a42ccf7806cc1af5fda269048be1972167c6c6516a211616e6c1da0f15e6',
+      'd7c6d014b342815ba29c48f3449e4f0073df84f4ad580ae173538041a6abb6b8',
+      '9cb3545c36940d9a2ef86d50d5c7a8fab90310cc898c4344bcfc4c822ff47bca',
+      'd662c10fcdb2b990cb13f9e934f4798d9bd0991979d03aaa052ccb6478d039af',
+      'f4db5270bd991b17bea1e6d035f45dee392919c29474bbac10342d223c74e0d0']
     });
 
-    subscription.on('event', (event) => {
-      const eventData = JSON.parse(event.content);
-      events = [...events, { ...eventData, id: event.id }];
-    });
-  });
-
-  function showLud16(lud16) {
-    currentLud16 = lud16;
-    showModal = true;
-  }
-
-  async function handleZap() {
-    if (!ndk) {
-      console.error('NDK is not defined');
-      return;
-    }
-
-    const metadata = {
-      content: JSON.stringify({
-        lud16: currentLud16,
-        comment: customZapComment // Include the comment in the metadata
-      })
-    };
-    const callback = await getZapEndpoint(metadata);
-
-    if (callback) {
-      const amountToSend = customZapAmountMillisats || zapAmount;
-      if (!amountToSend) {
-        console.error('Please enter a zap amount.');
-        return;
-      }
-
-      const zapRequest = makeZapRequest({
-        profile: currentLud16,
-        event: null,
-        amount: amountToSend,
-        comment: customZapComment, // Include the comment in the zap request
-        relays: ['wss://relay.damus.io'],
-      });
-
-      const response = await fetch(`${callback}?amount=${amountToSend}&nostr=${JSON.stringify(zapRequest)}`);
-      const { pr: invoice } = await response.json();
-
-      console.log('Invoice:', invoice);
-
+    // Handle incoming events of kind 0
+    subscriptionKind0.on('event', (event) => {
       try {
-        // Check if WebLN is available
-        if (window.webln) {
-          await window.webln.enable(); // Request permission to use WebLN
-          await window.webln.sendPayment(invoice); // Send payment using WebLN
-          console.log('Payment sent successfully via WebLN!');
-        } else {
-          console.error('WebLN not available.'); // Provide fallback if WebLN is unavailable
-          alert('WebLN not available. Please ensure you have a WebLN-enabled browser extension.');
-        }
-      } catch (err) {
-        console.error('WebLN error:', err);
-        alert('Failed to send payment via WebLN.');
+        const profile = JSON.parse(event.content); // Parse the content field
+        profiles[event.pubkey] = profile; // Store the parsed profile data
+      } catch (error) {
+        console.error("Error parsing profile content:", error);
       }
+    });
 
-    } else {
-      console.error('Failed to get zap endpoint.');
-    }
+    // Handle subscription errors
+    subscriptionKind1.on('error', (error) => {
+      console.error("Subscription error (Kind 1):", error);
+    });
 
-    closeModal();
+    subscriptionKind0.on('error', (error) => {
+      console.error("Subscription error (Kind 0):", error);
+    });
+
+  } catch (error) {
+    console.error("Error during onMount:", error);
+  }
+});
+
+onDestroy(() => {
+  // Clean up subscriptions and connections when the component is destroyed
+  if (subscriptionKind1) {
   }
 
-  function closeModal() {
-    showModal = false;
-    currentLud16 = '';
-    customZapAmountMillisats = ''; // Reset custom amount input in millisats
-    customZapAmountSats = ''; // Reset custom amount input in sats
-    zapAmount = ''; // Reset zap amount
-    customZapComment = ''; // Reset custom comment
+  if (subscriptionKind0) {
   }
 
-  function setZapAmount(amount) {
-    customZapAmountMillisats = amount.toString();
-    customZapAmountSats = (amount / 1000).toFixed(0); // Convert to sats for UI
+  if (ndk) {
   }
-</script>
+});
 
-<div class="event-container">
-  {#if events.length > 0}
-    {#each events as event (event.id)}
-      <div class="event">
-        <img src={event.picture} alt={event.name} width="50" height="50" />
-        <div class="event-details">
-          <div class="text-details">
-            <p class="event-name">{event.name}</p>
-            {#if event.about}
-              <p class="event-about">{event.about}</p>
-            {/if}
-          </div>
-          {#if event.lud16}
-            <button on:click={() => showLud16(event.lud16)} class="zap-button" aria-label="Zap {event.name}">
-              <img src={ZAP} alt="Zap pleb" width="30" height="30" aria-hidden="true" />
-            </button>
-          {/if}
-        </div>
-      </div>
-    {/each}
-  {:else}
-    <p>No events available.</p>
-  {/if}
-
-  {#if showModal}
-    <div class="modal" aria-modal="true" aria-labelledby="modal-title" role="dialog">
-      <div class="modal-content">
-        <span class="close" on:click={closeModal} aria-label="Close">&times;</span>
-        <h2 id="modal-title" class="modal-title">Zap {currentLud16}</h2>
-        <div class="zap-amounts">
-          <p>Select Zap Amount:</p>
-          {#each defaultZapAmounts as amount}
-            <button on:click={() => setZapAmount(amount)}>{amount / 1000} sats</button>
-          {/each}
-        </div>
-        <div class="custom-amount">
-          <input type="number" bind:value={customZapAmountSats} placeholder="Custom Amount (sats)" min="1" on:input={() => customZapAmountMillisats = (customZapAmountSats * 1000).toString()} />
-        </div>
-        <div class="custom-amount">
-          <input type="text" bind:value={customZapComment} placeholder="Add comment" />
-        </div>
-        <button class="send-button" on:click={handleZap}>Send Zap</button>
-      </div>
-    </div>
-  {/if}
-</div>
-
-
-
-<style>
-.event-container {
-margin-top: 20px;
-display: flex;
-flex-direction: column;
-gap: 10px;
-width: 29em;
-max-width: 30em;
-margin: 0 auto;
-padding: 20px;
-background: #f8f9fa;
-border-radius: 10px;
-box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-box-sizing: border-box;
-overflow: hidden; /* Prevent overflow of modal */
-word-wrap: break-word; /* Prevent text overflow */
-word-break: break-word; /* Force break long words */
-white-space: normal; /* Ensure text wraps inside container */
+function handleZap(lud16) {
+  alert(`Zap address: ${lud16}`);
 }
 
-  .event {
-      background: #fff;
-      border-radius: 10px;
-      padding: 15px;
-      display: flex;
-      align-items: center;
-      flex-wrap: wrap;
-      transition: transform 0.3s, box-shadow 0.3s;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-      box-sizing: border-box;
-  }
+// Function to get image URLs from event.tags
+function getImageUrls(tags) {
+  return tags
+    .filter(tag => tag[0] === 'image')
+    .map(tag => tag[1]);
+}
 
-  .event:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-  }
+// Function to find image URLs in event.content
+function extractImageUrls(content) {
+  const imageUrlRegex = /https?:\/\/[^\s]+(?:\.jpg|\.jpeg|\.png|\.gif)/gi;
+  return content.match(imageUrlRegex) || [];
+}
+</script>
 
-  .event img {
-      border-radius: 50%;
-      margin-right: 15px;
-      transition: transform 0.3s;
-  }
+<style>
+.loading {
+  font-size: 18px;
+  color: #007bff;
+  margin-bottom: 10px;
+}
 
-  .event img:hover {
-      transform: scale(1.1);
-  }
+.content-card {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 16px;
+  max-width: 600px;
+  margin: 16px auto;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
 
-  .event-details {
-      display: flex;
-      flex: 1;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-  }
+.profile-card {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16px;
+}
 
-  .text-details {
-      display: flex;
-      flex-direction: column;
-      flex: 1;
-      min-width: 0; /* Prevent overflow */
-  }
+.profile-card img {
+  border-radius: 50%;
+  width: 80px;
+  height: 80px;
+  margin-right: 16px;
+}
 
-  .event-name {
-      margin: 0;
-      font-size: 1.2em;
-      font-weight: bold;
-      color: #333;
-      word-wrap: break-word;
-  }
+.profile-card div {
+  display: flex;
+  flex-direction: column;
+}
 
-  .event-about {
-      margin: 5px 0 0;
-      font-size: 0.9em;
-      color: #666;
-      word-wrap: break-word;
-  }
+.profile-card h3 {
+  margin: 0;
+  font-size: 18px;
+}
 
-  .zap-button {
-      background: none;
-      border: none;
-      cursor: pointer;
-      padding: 0;
-      transition: transform 0.3s;
-  }
+.profile-card p {
+  margin: 0;
+  font-size: 14px;
+  color: #666;
+}
 
-  .zap-button img {
-      display: block;
-      transition: transform 0.3s;
-  }
+.zap-button {
+  background-color: #f7d74e;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 16px;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  margin-top: 8px;
+}
 
-  .zap-button:hover img {
-      transform: scale(1.2);
-  }
+.zap-button:hover {
+  background-color: #f5c141;
+}
 
-  @media (max-width: 600px) {
-      .event {
-          flex-direction: column;
-          text-align: center;
-      }
+.zap-icon {
+  margin-left: 8px;
+}
 
-      .event img {
-          margin-right: 0;
-          margin-bottom: 10px;
-      }
+.content-card pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
 
-      .event-details {
-          justify-content: center;
-      }
+.image-gallery {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
 
-      .zap-button {
-          margin-top: 10px;
-      }
-  }
-
-  .modal {
-    background: rgba(0, 0, 0, 0.5);
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-  }
-
-  .modal-content {
-    background: white;
-    border-radius: 10px;
-    padding: 20px;
-    position: relative;
-    width: 300px;
-  }
-
-  .close {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    font-size: 24px;
-    cursor: pointer;
-  }
-
-  .modal-title {
-    font-size: 20px;
-    font-weight: bold;
-    margin-bottom: 15px;
-  }
-
-  .zap-amounts {
-    margin-bottom: 15px;
-  }
-
-  .zap-amounts button {
-    margin-right: 10px;
-    margin-bottom: 10px;
-    background-color: #007bff;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    padding: 5px 10px;
-    cursor: pointer;
-  }
-
-  .zap-amounts button:hover {
-    background-color: #0056b3;
-  }
-
-  .custom-amount input {
-    margin-bottom: 15px;
-    padding: 5px;
-    border-radius: 5px;
-    border: 1px solid #ccc;
-    width: 100%;
-    box-sizing: border-box;
-  }
-
-  .send-button {
-    background-color: #28a745;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    padding: 10px;
-    cursor: pointer;
-    width: 100%;
-  }
-
+.image-gallery img {
+  max-width: auto;
+  height: 254px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
 </style>
+
+<div>
+  {#if isLoading}
+    <div class="loading">Loading events...</div>
+  {/if}
+
+  {#if eventsKind1.length > 0}
+    {#each eventsKind1 as event (event.id)}
+      {#if profiles[event.pubkey]}
+        <div class="content-card">
+          <div class="profile-card">
+            <img src={profiles[event.pubkey].picture || 'https://via.placeholder.com/80'} alt="Profile Picture">
+            <div>
+              <h3>{profiles[event.pubkey].name || 'Unknown'}</h3>
+            </div>
+          </div>
+
+          <pre>{event.content}</pre>
+
+          {#if getImageUrls(event.tags).length > 0}
+            <div class="image-gallery">
+              {#each getImageUrls(event.tags) as image}
+                <img src={image} alt="Event Image">
+              {/each}
+            </div>
+          {/if}
+
+          {#if extractImageUrls(event.content).length > 0}
+            <div class="image-gallery">
+              {#each extractImageUrls(event.content) as image}
+                <img src={image} alt="Event Image">
+              {/each}
+            </div>
+          {/if}
+
+          <p>Posted on: {new Date(event.created_at * 1000).toLocaleString()}</p>
+        </div>
+      {/if}
+    {/each}
+  {/if}
+</div>
