@@ -166,21 +166,24 @@
 
 
 <style>
-  .event-container {
-      margin-top: 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      width: 193px;
-      max-width: 200px;
-      margin: 0 auto;
-      padding: 20px;
-      background: #f8f9fa;
-      border-radius: 10px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-      box-sizing: border-box;
-          overflow: hidden; /* Prevent overflow of modal */
-  }
+.event-container {
+margin-top: 20px;
+display: flex;
+flex-direction: column;
+gap: 10px;
+width: 29em;
+max-width: 30em;
+margin: 0 auto;
+padding: 20px;
+background: #f8f9fa;
+border-radius: 10px;
+box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+box-sizing: border-box;
+overflow: hidden; /* Prevent overflow of modal */
+word-wrap: break-word; /* Prevent text overflow */
+word-break: break-word; /* Force break long words */
+white-space: normal; /* Ensure text wraps inside container */
+}
 
   .event {
       background: #fff;

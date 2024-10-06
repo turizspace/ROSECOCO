@@ -24,7 +24,12 @@
     nip07signer = new NDKNip07Signer();
 
     const ndk = new NDK({
-      explicitRelayUrls: ["wss://relay.primal.net", "wss://relay.snort.social"],
+      explicitRelayUrls: ['wss://relay.snort.social',
+      'wss://relay.damus.io',
+      'wss://relay.nostrplebs.com',
+      'wss://nos.lol',
+      'wss://relay.primal.net'
+      ],
       signer: nip07signer
     });
     await ndk.connect();

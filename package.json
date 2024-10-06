@@ -40,6 +40,8 @@
 	"type": "module",
 	"dependencies": {
 		"@nostr-dev-kit/ndk": "^2.8.2",
+		"@sveltejs/adapter-node": "^5.2.5",
+		"@sveltejs/adapter-static": "^3.0.5",
 		"concurrently": "^8.2.2",
 		"nostr-tools": "^2.7.0",
 		"svelte-routing": "^2.13.0"

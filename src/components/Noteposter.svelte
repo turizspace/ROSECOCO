@@ -26,7 +26,11 @@
 
     const ndk = new NDK({
       explicitRelayUrls: [
-      'ws://192.168.100.9:4736'
+      'wss://relay.snort.social',
+      'wss://relay.damus.io',
+      'wss://relay.nostrplebs.com',
+      'wss://nos.lol',
+      'wss://relay.primal.net'
       ],
       signer: nip07signer
     });
@@ -42,10 +46,17 @@
     ndkEvent.content = $input;
     console.log("posting...", ndkEvent);
 
+    try {
+
     await ndk.publish(ndkEvent);
 
     console.log("POSTED", ndkEvent);
     console.log("Your post has been Zapvertised!!");
+
+    } catch (error) {
+      warning.set('Failed to sign the event. Please try again.');
+      console.error('Error signing the event:', error);
+    }
   };
 </script>
 
