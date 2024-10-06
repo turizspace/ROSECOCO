@@ -13,7 +13,7 @@
 
     <main class="content">
         <h1>Welcome to Rosecoco</h1>
-        <p>The right place to find the right one</p>
+        <p>The right place to find exactly what you are looking for!</p>
         <Events />
     </main>
 </div>

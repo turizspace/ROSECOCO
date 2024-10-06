@@ -122,13 +122,22 @@ function extractImageUrls(content) {
 }
 
 .content-card {
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  padding: 16px;
-  max-width: 600px;
-  margin: 16px auto;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
+margin-top: 20px;
+display: flex;
+flex-direction: column;
+gap: 10px;
+width: 22em;
+max-width: 24em;
+margin: 0 auto;
+padding: 20px;
+background: #f8f9fa;
+border-radius: 10px;
+box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+box-sizing: border-box;
+overflow: hidden; /* Prevent overflow of modal */
+word-wrap: break-word; /* Prevent text overflow */
+word-break: break-word; /* Force break long words */
+white-space: normal; /* Ensure text wraps inside container */
 }
 
 .profile-card {
