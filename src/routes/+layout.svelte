@@ -3,44 +3,67 @@
     import Footer from '../components/Footer.svelte';
     import Noteposter from '../components/Noteposter.svelte';
     import Shitposter from '../components/Shitposter.svelte';
-    import { goto } from '$app/navigation';
     import { writable } from 'svelte/store';
+    import { goto } from '$app/navigation';
 
     let menuOpen = writable(false);
+    let showShitposterModal = writable(false);
+
+    // Function to toggle modal visibility
+    function toggleShitposterModal() {
+        showShitposterModal.update(current => !current);
+    }
 </script>
 
 <Header />
 
 <div class="container">
     <nav class="left-tabs">
-        <button class="hamburger" on:click={() => menuOpen.update(open => !open)}>
-            &#9776;
-        </button>
-        <ul class:show={$menuOpen}>
-            <li><a href="/" on:click="{(e) => { e.preventDefault(); goto('/'); }}">HOME</a></li>
-            <li><a href="/adventure" on:click="{(e) => { e.preventDefault(); goto('/adventure'); }}">Adventure</a></li>
-            <li><a href="/culture" on:click="{(e) => { e.preventDefault(); goto('/culture'); }}">Culture</a></li>
-            <li><a href="/dining" on:click="{(e) => { e.preventDefault(); goto('/dining'); }}">Dining</a></li>
-            <li><a href="/fantasy" on:click="{(e) => { e.preventDefault(); goto('/fantasy'); }}">Fantasy</a></li>
-            <li><a href="/nightlife" on:click="{(e) => { e.preventDefault(); goto('/nightlife'); }}">Nightlife</a></li>
-            <li><a href="/private" on:click="{(e) => { e.preventDefault(); goto('/private'); }}">Private</a></li>
-            <li><a href="/shopping" on:click="{(e) => { e.preventDefault(); goto('/shopping'); }}">Shopping</a></li>
-            <li><a href="/tours" on:click="{(e) => { e.preventDefault(); goto('/tours'); }}">Tours</a></li>
-        </ul>
+    <button class="hamburger" on:click={() => menuOpen.update(open => !open)}>
+        &#9776;
+    </button>
+    <ul class:show={$menuOpen}>
+        <li><a href="/" on:click="{(e) => { e.preventDefault(); goto('/'); menuOpen.set(false); }}">HOME</a></li>
+        <li><a href="/adventure" on:click="{(e) => { e.preventDefault(); goto('/adventure'); menuOpen.set(false); }}">Adventure</a></li>
+        <li><a href="/culture" on:click="{(e) => { e.preventDefault(); goto('/culture'); menuOpen.set(false); }}">Culture</a></li>
+        <li><a href="/dining" on:click="{(e) => { e.preventDefault(); goto('/dining'); menuOpen.set(false); }}">Dining</a></li>
+        <li><a href="/fantasy" on:click="{(e) => { e.preventDefault(); goto('/fantasy'); menuOpen.set(false); }}">Fantasy</a></li>
+        <li><a href="/nightlife" on:click="{(e) => { e.preventDefault(); goto('/nightlife'); menuOpen.set(false); }}">Nightlife</a></li>
+        <li><a href="/private" on:click="{(e) => { e.preventDefault(); goto('/private'); menuOpen.set(false); }}">Private</a></li>
+        <li><a href="/shopping" on:click="{(e) => { e.preventDefault(); goto('/shopping'); menuOpen.set(false); }}">Shopping</a></li>
+        <li><a href="/tours" on:click="{(e) => { e.preventDefault(); goto('/tours'); menuOpen.set(false); }}">Tours</a></li>
+    </ul>
 
-        <Noteposter class="noteposter" />
+    <Noteposter class="noteposter" />
     </nav>
 
+
     <main class="content">
-        <slot></slot>
+        <slot />
     </main>
 
-    <aside class="right-tabs">
-        <ul>
-            <li><a href="#" on:click="{(e) => { e.preventDefault(); goto('/'); }}">Highlights</a></li>
-        </ul>
+    <!-- Right tabs content (Shitposter component only on smaller screens or modal) -->
+    <div class="right-tabs">
+        <!-- Shitposter visible on large screens -->
         <Shitposter class="shitposter" />
-    </aside>
+        <!-- Shitposter visible only when modal is toggled on small screens -->
+        {#if $showShitposterModal}
+            <Shitposter class="modal-shitposter" />
+        {/if}
+    </div>
+
+    <!-- Floating Button for Small Screens -->
+    <button class="floating-btn" on:click={toggleShitposterModal}>+</button>
+
+    <!-- Modal for Shitposter -->
+    {#if $showShitposterModal}
+        <div class="modal-overlay" on:click={toggleShitposterModal}>
+            <div class="modal-content" on:click|stopPropagation>
+                <Shitposter class="modal-shitposter" />
+                <button class="close-btn" on:click={toggleShitposterModal}>X</button>
+            </div>
+        </div>
+    {/if}
 </div>
 
 <Footer />
@@ -48,28 +71,24 @@
 <style>
     .container {
         display: flex;
-        min-height: calc(100vh - 4em); /* Adjusting height for header and footer */
+        flex-direction: row;
     }
 
     .left-tabs, .right-tabs {
-        flex: 0 0 12em; /* Fixed width for sidebars */
-        background: linear-gradient(135deg, #f4f4f4, #e0e0e0); /* Light gradient background */
+        flex: 0 0 10em;
+        background: linear-gradient(135deg, #f4f4f4, #e0e0e0);
         padding: 1em;
-        overflow-y: auto; /* Allow scrolling if content overflows */
+        overflow-y: auto;
     }
 
-    .left-tabs {
-        border-right: 1px solid #ddd; /* Border to separate left tabs from content */
-    }
-
-    .right-tabs {
-        border-left: 1px solid #ddd; /* Border to separate right tabs from content */
+    .left-tabs, .right-tabs {
+        border-right: 1px solid #ddd;
     }
 
     .left-tabs ul, .right-tabs ul {
         list-style: none;
         padding: 0;
-        margin: 0; /* Ensure no extra space around lists */
+        margin: 0;
     }
 
     .left-tabs li, .right-tabs li {
@@ -84,28 +103,22 @@
         background: #fff;
         border-radius: 5px;
         transition: all 0.3s ease;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
     }
 
     .left-tabs a:hover, .right-tabs a:hover {
         color: #fff;
-        background: #ff6347; /* Tomato color on hover */
+        background: #ff6347;
         transform: translateY(-2px);
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
     }
 
     .content {
-        flex: 1; /* Takes remaining space */
+        flex: 1;
         padding: 1em;
         display: flex;
         flex-direction: column;
-        align-items: center; /* Center horizontally */
-        margin-top: 2em; /* Add some top margin */
-        overflow-y: auto; /* Allow scrolling if content overflows */
-    }
-
-    .content h1, .content p {
-        text-align: center; /* Center text inside the content */
+        align-items: center;
+        margin-top: 0.2em;
+        overflow-y: auto;
     }
 
     .hamburger {
@@ -116,40 +129,110 @@
         cursor: pointer;
     }
 
+    .floating-btn {
+        display: none;
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background-color: #ff6347;
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        font-size: 30px;
+        cursor: pointer;
+    }
+
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .modal-content {
+        background: white;
+        padding: 2em;
+        border-radius: 8px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        position: relative;
+    }
+
+    .close-btn {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background-color: #ff6347;
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        font-size: 18px;
+        cursor: pointer;
+    }
+
+    /* Mobile Styling */
     @media (max-width: 768px) {
         .container {
-            flex-direction: column; /* Stack sidebars and content vertically */
+            flex-direction: column;
         }
 
         .left-tabs, .right-tabs {
-            flex: 0 0 auto; /* Allow them to resize based on content */
+            flex: 0 0 auto;
             width: 100%;
-            border: none; /* Remove borders for cleaner look */
+            border: none;
             padding: 0;
         }
 
         .hamburger {
-            display: block; /* Show hamburger menu on small screens */
-            margin: 1em;
+            display: block;
         }
 
         .left-tabs ul {
-            display: none; /* Hide menu on small screens */
+            display: none;
         }
 
         .left-tabs ul.show {
-            display: block; /* Show menu when hamburger is clicked */
-            background: linear-gradient(135deg, #f4f4f4, #e0e0e0); /* Light gradient background */
-            padding: 1em;
-            border-right: 1px solid #ddd; /* Border to separate left tabs from content */
+            display: block;
         }
 
-        .noteposter, .shitposter, .right-tabs {
-            display: none; /* Hide Noteposter, Shitposter, and right-tabs on small screens */
+        .floating-btn {
+            display: block;
         }
 
         .right-tabs {
-            order: -1; /* Place right-tabs before content */
+            display: none; /* Hide right tabs on mobile */
+        }
+
+        /* Show Shitposter only in modal on mobile */
+        .modal-shitposter {
+            display: block;
+        }
+    }
+
+    /* Large Screen - Keep Shitposter visible in right-tabs */
+    @media (min-width: 769px) {
+        .right-tabs {
+            display: block; /* Show right tabs on larger screens */
+        }
+
+        .floating-btn {
+            display: none; /* Hide floating button on large screens */
+        }
+
+        .modal-shitposter {
+            display: none; /* Keep Shitposter hidden in modal on large screens */
+        }
+
+        .shitposter {
+            display: block; /* Show Shitposter in right-tabs on large screens */
         }
     }
 </style>

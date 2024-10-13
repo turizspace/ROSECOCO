@@ -44,7 +44,6 @@
     // Create a post
     ndkEvent.kind = 1;
     ndkEvent.content = $input;
-    console.log("posting...", ndkEvent);
 
     try {
 
